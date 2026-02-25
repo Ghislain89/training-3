@@ -1,4 +1,5 @@
 import { expect } from '@playwright/test';
+import { FILTER_TYPE } from '../constants/filterType.js';
 
 export class ListPage {
   /**
@@ -28,6 +29,7 @@ export class ListPage {
 
     //Pak het juiste <li> op basis van de title-button in die row
     this.sessionsList = page.getByTestId("sessions-list");
+    this.sessionItems = this.sessionsList.locator('[data-testid^="session-item-"]');
 
     //this.getSessionItemByTitle(title) = title => this.sessionsList.getByRole('listitem').filter({ has: this.page.getByRole('button', { name: title, exact: true }), }).first();
 
@@ -35,12 +37,25 @@ export class ListPage {
     this.txtStatus = this.page.locator('[data-testid^="status-badge-"]');
     this.txtDescription = this.page.locator('p.session-description');
     this.txtDuration = this.page.locator('p.session-duration');
+    this.txtFilterSummary = this.page.locator('p.filter-summary');
+    
 
-    this.filterTitle = page.getByTestId("filter-title");
-    this.filterDuration = page.getByTestId("filter-duration");
-    this.filterStatus = page.getByTestId("filter-status");
-    this.btnClearFilters = page.getByTestId("clear-filters");
+    this.filterTitle = this.page.getByTestId("filter-title");
+    this.filterDuration = this.page.getByTestId("filter-duration");
+    this.filterStatus = this.page.getByTestId("filter-status");
+    this.btnClearFilters = this.page.getByTestId("clear-filters");
   }
+
+  // =====================================
+  // Helper methods 
+  // =====================================
+
+  sessionTitleIn = (item) => item.locator('[data-testid^="edit-session-"]');
+  sessionStatusIn = (item) => item.locator('[data-testid^="status-badge-"]');
+  sessionDescriptionIn = (item) => item.locator('p.session-description');
+  sessionDurationIn = (item) => item.locator('p.session-duration');
+
+
 
   //Actions
   getSessionItemByTitle(title) {
@@ -62,16 +77,10 @@ export class ListPage {
       }),
     ).toBeVisible();
 
-    await expect(item.locator("button.title-edit-button")).toHaveText(
-      data.title,
-    );
-    await expect(item.locator(".session-description")).toHaveText(
-      data.description,
-    );
+    await expect(item.locator("button.title-edit-button")).toHaveText(data.title);
+    await expect(item.locator(".session-description")).toHaveText(data.description);
     await expect(item.getByRole("status")).toHaveText(data.status);
-    await expect(item.locator(".session-duration")).toHaveText(
-      `Duration: ${data.durationHours} hours`,
-    );
+    await expect(item.locator(".session-duration")).toHaveText(`Duration: ${data.durationHours} hours`);
   }
 
   async clickAddSessionButton() {
@@ -100,46 +109,84 @@ export class ListPage {
     await expect(this.btnEditSessionByTitle(title)).toHaveCount(0);
   }
 
-//Onderstaande verder optimaliseren
-  async getAllVisibleSessions() {
-  
-  const items = await this.page.getByRole('listitem').all();
-  const sessions = [];
-
-  for (const item of items) {
-    const title = (
-      await item.locator('[data-testid^="edit-session-"]').innerText()
-    ).trim();
-
-    const description = (
-      await item.locator('p.session-description').innerText()
-    ).trim();
-
-    const status = (
-      await item.locator('[data-testid^="status-badge-"]').innerText()
-    ).trim();
-
-    const durationText = (
-      await item.locator('p.session-duration').innerText()
-    ).trim();
-
-    const durationHours = this._parseDurationHours(durationText);
-
-    sessions.push({
-      title,
-      description,
-      status,
-      durationText,
-      durationHours,
-    });
+  async expectFilterSummaryVisibleAndContainsText(expectedText) {
+    await expect(this.txtFilterSummary).toBeVisible();
+    await expect(this.txtFilterSummary).toContainText(expectedText);
   }
 
-  return sessions;
+  async getAllVisibleSessions() {
+  // Wacht even tot er minstens 1 item is (of 0 als lijst leeg kan zijn)
+  await this.sessionItems.first().waitFor({ state: 'visible' });
+
+  return await this.sessionItems.evaluateAll((items) => {
+    const parseHours = (durationText) => {
+      const match = durationText?.match(/Duration:\s*([\d.]+)\s*hours?/i);
+      return match ? Number(match[1]) : null;
+    };
+
+    return items.map((item) => {
+      
+      const title = item.querySelector('[data-testid^="edit-session-"]')?.textContent?.trim() ?? null;
+      const description = item.querySelector('p.session-description')?.textContent?.trim() ?? null;
+      const status = item.querySelector('[data-testid^="status-badge-"]')?.textContent?.trim() ?? null;
+      const durationText = item.querySelector('p.session-duration')?.textContent?.trim() ?? null;
+      const durationHours = durationText ? parseHours(durationText) : null;
+
+      return { title, description, status, durationText, durationHours };
+    });
+  });
 }
 
-  _parseDurationHours(durationText) {
-    // "Duration: 2 hours" -> 2
-    const match = durationText.match(/Duration:\s*([\d.]+)\s*hours?/i);
-    return match ? Number(match[1]) : null;
+
+expectAllVisibleSessionsMatchFilters(sessions, filters) {
+  const matchers = {
+    [FILTER_TYPE.TITLE]: (s, value) => s.title?.trim().toLowerCase().includes(value.trim().toLowerCase()),
+    [FILTER_TYPE.DURATION]: (s, value) => s.durationHours === Number.parseFloat(value),
+    [FILTER_TYPE.STATUS]: (s, value) => s.status === value,
+  };
+
+  for (const { filterType, value } of filters) {
+    const matcher = matchers[filterType];
+
+    if (!matcher) { throw new Error(`Unknown filterType: ${filterType}`);}
+    
+    const allMatch = sessions.every(session => matcher(session, value));
+
+    expect(allMatch).toBeTruthy();
   }
+}
+
+
+  async filterByTitle(titleText) {
+    await this.filterTitle.fill("");          
+    await this.filterTitle.fill(titleText); 
+  }
+
+  async filterByDuration(durationText) {
+    await this.filterDuration.fill("");
+    await this.filterDuration.fill(durationText);
+  }
+
+  async filterByStatus(statusLabel) {
+    await this.filterStatus.selectOption({ label: statusLabel });
+  }
+
+  async clearFilters() {
+    await this.btnClearFilters.click();
+  }
+
+  async buildExpectedSessionsSummaryText(page, { shown, total, filters = [] }) {
+    let expected = `Showing ${shown} of ${total} sessions`;
+
+    for (const { filterType, value } of filters) {
+      expected += ` matching ${filterType} "${value}"`;
+    }
+
+    return expected;
+  }
+
+  async getActualSessionsSummaryText() {
+    return await this.txtFilterSummary.innerText();
+  }
+
 }

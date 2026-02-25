@@ -1,5 +1,6 @@
 import { test, expect } from '../fixtures/pages.js';
 import { SESSION_STATUS } from '../constants/sessionStatus.js';
+import { FILTER_TYPE } from '../constants/filterType.js';
 import { createSessionContext } from '../utils/sessionTestData.js';
 
 //Cancellation of session not possible
@@ -133,10 +134,143 @@ test('6. Een sessie kan succesvol worden verwijderd vanuit de edit page --> Redi
   await listPage.expectSessionNotPresent(scenarioContextAddedSessions.title);
 });
 
-test("7. Een sessie kan succesvol worden gefilterd op title, duration en status", async ({
-  listPage,
-}) => {
-  await listPage.getAllVisibleSessions();
+//Let op --> In ideale situatie begin je bij onderstaande tests met een vooraf vastgestelde dataset zodat je niet afhankelijk bent van data die al in het systeem staat.
+test("7. Een sessie kan succesvol worden gefilterd op title, gefilterde titels bevatten de filterwaarde", async ({ listPage}) => {
+  //Krijg alle data zichtbaar op de list page voordat je gaat filteren
+  await listPage.clearFilters();
+  const unfilteredSessions = await listPage.getAllVisibleSessions();
+
+  //Filteren in FE op title, sla deze data op, expliciet testen dat alle titels van gefilterde sessies de filterwaarde bevatten
+  const filterValue = "training";
+  await listPage.filterByTitle(filterValue);
+  const filteredSessions = await listPage.getAllVisibleSessions();
+  
+  //Gefilterde sessies hebben allemaal de title die gelijk is aan de filterwaarde
+  await listPage.expectAllVisibleSessionsMatchFilters(filteredSessions, [ { filterType: FILTER_TYPE.TITLE, value: filterValue } ]);
+
+  //Filter de onbewerkte sessies op dezelfde waarde als waarop je gefilterd hebt in de UI en toets dat het resultaat gelijk is aan elkaar
+  const expectedFilteredSessions = unfilteredSessions.filter(s => s.title.trim().toLowerCase().includes(filterValue.trim().toLowerCase()));
+  expect(filteredSessions).toEqual(expectedFilteredSessions);
+
+  //Clear filters and check if all sessions are visible again
+  await listPage.clearFilters();
+  const allSessionsAfterClearingFilters = await listPage.getAllVisibleSessions();
+  expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
 });
+
+test("8. Een sessie kan succesvol worden gefilterd op duration, gefilterde durations bevatten de filterwaarde", async ({ listPage}) => {
+  //Krijg alle data zichtbaar op de list page voordat je gaat filteren
+  await listPage.clearFilters();
+  const unfilteredSessions = await listPage.getAllVisibleSessions();
+
+  //Filteren in FE op duration, sla deze data op, expliciet testen dat alle durations van gefilterde sessies gelijk zijn aan de filterwaarde
+  const filterValue = "3.5";
+  await listPage.filterByDuration(filterValue);
+  const filteredSessions = await listPage.getAllVisibleSessions();
+
+  //Gefilterde sessies hebben allemaal de duration die gelijk is aan de filterwaarde
+  await listPage.expectAllVisibleSessionsMatchFilters(filteredSessions, [ { filterType: FILTER_TYPE.DURATION, value: filterValue } ]);
+
+  //Filter de onbewerkte sessies op dezelfde waarde als waarop je gefilterd hebt in de UI en toets dat het resultaat gelijk is aan elkaar
+  const expectedFilteredSessions = unfilteredSessions.filter(s => s.durationHours === parseFloat(filterValue));
+  expect(filteredSessions).toEqual(expectedFilteredSessions);
+
+  //Clear filters and check if all sessions are visible again
+  await listPage.clearFilters();
+  const allSessionsAfterClearingFilters = await listPage.getAllVisibleSessions();
+  expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
+});
+
+test("9. Een sessie kan succesvol worden gefilterd op status, gefilterde statussen zijn gelijk aan de filterwaarde", async ({ listPage}) => {
+  //Krijg alle data zichtbaar op de list page voordat je gaat filteren
+  await listPage.clearFilters();
+  const unfilteredSessions = await listPage.getAllVisibleSessions();
+
+  //Filteren in FE op duration, sla deze data op
+  const filterValue = SESSION_STATUS.COMPLETED;
+  await listPage.filterByStatus(filterValue);
+  const filteredSessions = await listPage.getAllVisibleSessions();
+
+  //Gefilterde sessies hebben allemaal de status die gelijk is aan de filterwaarde
+  await listPage.expectAllVisibleSessionsMatchFilters(filteredSessions, [ { filterType: FILTER_TYPE.STATUS, value: filterValue } ] );
+
+  //Filter de onbewerkte sessies op dezelfde waarde als waarop je gefilterd hebt in de UI en toets dat het resultaat gelijk is aan elkaar
+  const expectedFilteredSessions = unfilteredSessions.filter(s => s.status === filterValue);
+  expect(filteredSessions).toEqual(expectedFilteredSessions);
+
+  //Clear filters and check if all sessions are visible again
+  await listPage.clearFilters();
+  const allSessionsAfterClearingFilters = await listPage.getAllVisibleSessions();
+  expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
+});
+
+test("10. Filter op titel, duration en status toont correcte resultaatsamenvatting met aantal, totaal en zoekterm", async ({ listPage}) => {
+  //Krijg alle data zichtbaar op de list page voordat je gaat filteren
+  await listPage.clearFilters();
+  const unfilteredSessions = await listPage.getAllVisibleSessions();
+
+  //Filteren op title & assertion resultaatsamenvatting
+  const titleFilterValue = "test";
+  await listPage.filterByTitle(titleFilterValue);
+  const filteredOnTitleSessions = await listPage.getAllVisibleSessions();
+  const expectedSummaryTextTitle = await listPage.buildExpectedSessionsSummaryText(listPage, { shown: filteredOnTitleSessions.length, total: unfilteredSessions.length, filters: [{ filterType: FILTER_TYPE.TITLE, value: titleFilterValue }] });
+  const actualSummaryTextTitle = await listPage.getActualSessionsSummaryText();
+  expect(actualSummaryTextTitle).toBe(expectedSummaryTextTitle);
+
+  //Filteren op duration & assertion resultaatsamenvatting
+  await listPage.clearFilters();
+  const durationFilterValue = "2.5";
+  await listPage.filterByDuration(durationFilterValue);
+  const filteredOnDurationSessions = await listPage.getAllVisibleSessions();
+  const expectedSummaryTextDuration = await listPage.buildExpectedSessionsSummaryText(listPage, { shown: filteredOnDurationSessions.length, total: unfilteredSessions.length, filters: [{ filterType: FILTER_TYPE.DURATION, value: durationFilterValue }] });
+  const actualSummaryTextDuration = await listPage.getActualSessionsSummaryText();
+  expect(actualSummaryTextDuration).toBe(expectedSummaryTextDuration);
+
+  //Filteren op status & assertion resultaatsamenvatting
+  await listPage.clearFilters();
+  const statusFilterValue = SESSION_STATUS.COMPLETED;
+  await listPage.filterByStatus(statusFilterValue);
+  const filteredOnStatusSessions = await listPage.getAllVisibleSessions();
+  const expectedSummaryTextStatus = await listPage.buildExpectedSessionsSummaryText(listPage, { shown: filteredOnStatusSessions.length, total: unfilteredSessions.length, filters: [{ filterType: FILTER_TYPE.STATUS, value: statusFilterValue }] });
+  const actualSummaryTextStatus = await listPage.getActualSessionsSummaryText();
+  expect(actualSummaryTextStatus).toBe(expectedSummaryTextStatus);
+
+  //Filteren op alle drie & assertion resultaatsamenvatting
+  await listPage.clearFilters();
+  await listPage.filterByTitle(titleFilterValue);
+  await listPage.filterByDuration(durationFilterValue);
+  await listPage.filterByStatus(statusFilterValue);
+
+  const filteredOnAllCriteriaSessions = await listPage.getAllVisibleSessions();
+
+  //Gefilterde sessies hebben allemaal de title, duration en status die gelijk is aan de filterwaarde
+  await listPage.expectAllVisibleSessionsMatchFilters(
+    filteredOnAllCriteriaSessions,
+    [ 
+      { filterType: FILTER_TYPE.TITLE, value: titleFilterValue },
+      { filterType: FILTER_TYPE.DURATION, value: durationFilterValue },
+      { filterType: FILTER_TYPE.STATUS, value: statusFilterValue }, 
+    ]
+  );
+
+  const expectedSummaryTextAllCriteria =
+    await listPage.buildExpectedSessionsSummaryText(listPage, {
+      shown: filteredOnAllCriteriaSessions.length,
+      total: unfilteredSessions.length,
+      filters: [
+        { filterType: FILTER_TYPE.TITLE, value: titleFilterValue},
+        { filterType: FILTER_TYPE.DURATION, value: durationFilterValue},
+        { filterType: FILTER_TYPE.STATUS, value: statusFilterValue},
+      ],
+    });
+  const actualSummaryTextAllCriteria = await listPage.getActualSessionsSummaryText();
+  expect(actualSummaryTextAllCriteria).toBe(expectedSummaryTextAllCriteria);
+
+  //Clear filters and check if all sessions are visible again
+  await listPage.clearFilters();
+  const allSessionsAfterClearingFilters = await listPage.getAllVisibleSessions();
+  expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
+});
+
 
 });
