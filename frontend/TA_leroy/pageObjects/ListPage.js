@@ -61,9 +61,7 @@ export class ListPage {
   getSessionItemByTitle(title) {
     return this.sessionsList
       .getByRole("listitem")
-      .filter({
-        has: this.btnEditSessionByTitle(title),
-      })
+      .filter({ has: this.btnEditSessionByTitle(title)})
       .first();
   }
 
@@ -77,10 +75,10 @@ export class ListPage {
       }),
     ).toBeVisible();
 
-    await expect(item.locator("button.title-edit-button")).toHaveText(data.title);
-    await expect(item.locator(".session-description")).toHaveText(data.description);
-    await expect(item.getByRole("status")).toHaveText(data.status);
-    await expect(item.locator(".session-duration")).toHaveText(`Duration: ${data.durationHours} hours`);
+    await expect(item.locator(this.txtTitle)).toHaveText(data.title);
+    await expect(item.locator(this.txtDescription)).toHaveText(data.description);
+    await expect(item.locator(this.txtStatus)).toHaveText(data.status);
+    await expect(item.locator(this.txtDuration)).toHaveText(`Duration: ${data.durationHours} hours`);
   }
 
   async clickAddSessionButton() {

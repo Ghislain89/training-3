@@ -14,7 +14,6 @@ export class AddPage {
         this.fieldStatus  = page.getByLabel('Status *');
         this.fieldDuration  = page.getByLabel('Duration (hours)');
         this.btnCreateSession = page.getByRole('button', { name: 'Create training session' })
-
     }
 
     //Actions

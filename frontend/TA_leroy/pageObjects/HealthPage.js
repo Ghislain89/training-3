@@ -30,7 +30,6 @@ export class HealthPage {
         contentType: "application/json",
         headers: {
           "Access-Control-Allow-Origin": "*",
-          //"Cache-Control": "no-store", // voorkomt caching issues
         },
         body: JSON.stringify({
           status: "OK",

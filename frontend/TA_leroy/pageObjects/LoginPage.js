@@ -34,9 +34,4 @@ export class LoginPage {
     async clickForgotPasswordLink(){
         await this.lnkForgotPassword.click();
     }
-
-
-
-
-
 }

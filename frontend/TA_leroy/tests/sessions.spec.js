@@ -134,8 +134,27 @@ test('6. Een sessie kan succesvol worden verwijderd vanuit de edit page --> Redi
   await listPage.expectSessionNotPresent(scenarioContextAddedSessions.title);
 });
 
+test('7. De status van een toegevoegde sessie kan niet worden gewijzigd naar "Cancelled"', async ({ basePage, listPage, addPage, editPage }) => {
+  //Naar add page navigeren
+  await listPage.clickAddSessionButton();
+
+  //Session data aanmaken
+  const scenarioContextAddedSessions = createSessionContext();
+  await addPage.createSessionWithData(scenarioContextAddedSessions);
+  await addPage.clickCreateSessionButton();
+
+  //Van sessie die zojuist is aangemaakt, status wijzigen naar "Cancelled" via edit page en opslaan
+  await listPage.editSessionByClickOnTitle(scenarioContextAddedSessions.title);
+  await editPage.assertSessionData(scenarioContextAddedSessions);
+  await editPage.fieldStatus.selectOption(SESSION_STATUS.CANCELLED);
+  await editPage.saveChanges();
+
+  //Controleren of je op de list page bent en sessie niet meer in de lijst staat
+  await editPage.assertUpdateFailedMessage();
+});
+
 //Let op --> In ideale situatie begin je bij onderstaande tests met een vooraf vastgestelde dataset zodat je niet afhankelijk bent van data die al in het systeem staat.
-test("7. Een sessie kan succesvol worden gefilterd op title, gefilterde titels bevatten de filterwaarde", async ({ listPage}) => {
+test("8. Een sessie kan succesvol worden gefilterd op title, gefilterde titels bevatten de filterwaarde", async ({ listPage}) => {
   //Krijg alle data zichtbaar op de list page voordat je gaat filteren
   await listPage.clearFilters();
   const unfilteredSessions = await listPage.getAllVisibleSessions();
@@ -158,7 +177,7 @@ test("7. Een sessie kan succesvol worden gefilterd op title, gefilterde titels b
   expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
 });
 
-test("8. Een sessie kan succesvol worden gefilterd op duration, gefilterde durations bevatten de filterwaarde", async ({ listPage}) => {
+test("9. Een sessie kan succesvol worden gefilterd op duration, gefilterde durations bevatten de filterwaarde", async ({ listPage}) => {
   //Krijg alle data zichtbaar op de list page voordat je gaat filteren
   await listPage.clearFilters();
   const unfilteredSessions = await listPage.getAllVisibleSessions();
@@ -181,7 +200,7 @@ test("8. Een sessie kan succesvol worden gefilterd op duration, gefilterde durat
   expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
 });
 
-test("9. Een sessie kan succesvol worden gefilterd op status, gefilterde statussen zijn gelijk aan de filterwaarde", async ({ listPage}) => {
+test("10. Een sessie kan succesvol worden gefilterd op status, gefilterde statussen zijn gelijk aan de filterwaarde", async ({ listPage}) => {
   //Krijg alle data zichtbaar op de list page voordat je gaat filteren
   await listPage.clearFilters();
   const unfilteredSessions = await listPage.getAllVisibleSessions();
@@ -204,7 +223,7 @@ test("9. Een sessie kan succesvol worden gefilterd op status, gefilterde statuss
   expect(allSessionsAfterClearingFilters).toEqual(unfilteredSessions);
 });
 
-test("10. Filter op titel, duration en status toont correcte resultaatsamenvatting met aantal, totaal en zoekterm", async ({ listPage}) => {
+test("11. Filter op titel, duration en status toont correcte resultaatsamenvatting met aantal, totaal en zoekterm", async ({ listPage}) => {
   //Krijg alle data zichtbaar op de list page voordat je gaat filteren
   await listPage.clearFilters();
   const unfilteredSessions = await listPage.getAllVisibleSessions();
