@@ -1,0 +1,96 @@
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/api-fixture';
+import { sessionData } from '../utils/testData';
+import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions';
+
+
+  test('GET /sessions returns array', async ({ api }) => {
+    const res = await api.get('/api/sessions');
+    expectOk(res);
+
+    const body = await res.json();
+    expect(Array.isArray(body)).toBe(true);
+  });
+
+  test('GET /sessions items contain required fields', async ({ api }) => {
+    const res = await api.get('/api/sessions');
+    expectOk(res);
+
+    const list = await res.json();
+    for (const item of list) {
+      expect(item).toHaveProperty('id');
+      expect(item).toHaveProperty('title');
+      expect(item).toHaveProperty('description');
+      expect(item).toHaveProperty('status');
+      expect(item).toHaveProperty('duration');
+    }
+  });
+
+  test.describe('GET /sessions/:id – invalid cases', () => {
+
+    const testCases = [
+      // Geldige maar niet-bestaande ids → 404
+      { id: '999999', expected: 404, error: 'Training session not found', description: 'non-existing id' },
+      { id: '-1', expected: 404, error: 'Training session not found', description: 'negative id' },
+      { id: '0', expected: 404, error: 'Training session not found', description: 'zero id' },
+      { id: '3.5', expected: 404, error: 'Training session not found', description: 'float id 1' },
+      { id: '3,5', expected: 404, error: 'Training session not found', description: 'float id 2' },
+      { id: '99999999999999999999', expected: 404, error: 'Training session not found', description: 'very large integer' },
+      { id: '𝟙', expected: 404, error: 'Training session not found', description: 'unicode integer' },
+      
+          // Ongeldige id → 400 (router kan het niet parsen) of 404 (router kan het parsen maar vindt niks)
+      { id: 'abc', expected: 404, error: 'Training session not found', description: 'invalid id type' },
+      { id: 'NaN', expected: 404, error: 'Training session not found', description: 'Not a Number' },
+      { id: '%FF', expected: 400, error: 'Invalid UTF-8 encoding', description: 'invalid UTF‑8' },
+      { id: '%C3%28', expected: 400, error: 'Invalid UTF-8 encoding', description: 'broken UTF‑8 sequence' },
+      { id: '%00', expected: 404, error: 'Training session not found', description: 'Null byte' },
+
+      // Inputs die NIET naar /sessions/:id gaan maar naar /sessions → 200
+      { id: '', expected: 200, description: 'empty string resolves to list endpoint' },
+      { id: ' ', expected: 200, description: 'whitespace resolves to list endpoint' },
+      
+      // Overige rare inputs → meestal 404
+      { id: 'null', expected: 404, error: 'Training session not found', description: 'literal null' },
+      { id: '""', expected: 404, error: 'Training session not found', description: 'quoted empty string resolves to list endpoint' },
+      { id: '¡²³¤€¼½¾‘’', expected: 404, error: 'Training session not found', description: 'special characters' },
+      { id: '{ "id": 1 }', expected: 404, error: 'Training session not found', description: 'JSON input 1' },
+      { id: '{"id":4}', expected: 404, error: 'Training session not found', description: 'JSON input 2' },
+      { id: '1 OR 1=1', expected: 404, error: 'Training session not found', description: 'SQL injection attempt' },
+      { id: '😀', expected: 404, error: 'Training session not found', description: 'emoji' },
+      { id: '<script>alert(1)</script>', expected: 404, error: 'Training session not found', description: 'XSS attempt' },
+
+      // Paden die bestaan maar niet onder /sessions/:id vallen → 404
+      { id: 'add', expected: 404, error: 'Training session not found', description: 'existing route but not an id' },
+      { id: 'edit', expected: 404, error: 'Training session not found', description: 'existing route but not an id' },
+      { id: 'edit/4', expected: 404, error: 'Training session not found', description: 'nested route' },
+
+    ];
+  
+    for (const c of testCases) {
+    test(`id "${c.id}" → ${c.expected} (${c.description})`, async ({ api }) => {
+      const res = await api.get(`/api/sessions/${c.id}`);
+
+      // Statuscode assertions via jouw utils
+      if (c.expected === 404) {
+        expectNotFound(res);
+      } else if (c.expected === 400) {
+        expectBadRequest(res);
+      } else if (c.expected === 200) {
+        expectOk(res);
+      } else {
+        throw new Error(`Unexpected expected status: ${c.expected}`);
+      }
+
+      // Error body check (alleen bij 400/404)
+      if (c.expected === 400 || c.expected === 404) {
+        const body = await res.json();
+        expect(body).toHaveProperty('error');
+
+        if (c.error) {
+          expect(body.error).toContain(c.error);
+        }
+      }
+    });
+  }
+
+  });

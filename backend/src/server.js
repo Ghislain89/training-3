@@ -5,10 +5,51 @@ import bodyParser from 'body-parser';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import DatabaseService from './database.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+//Swagger config
+const swaggerSpec = swaggerJsdoc({
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Training API',
+      version: '1.0.0',
+    },
+    components: {
+      schemas: {
+        Session: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer' },
+            title: { type: 'string' },
+            description: { type: 'string' },
+            status: { type: 'string' },
+            duration: { type: 'number' }
+          }
+        },
+        SessionInput: {
+          type: 'object',
+          required: ['title', 'description', 'status', 'duration'],
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            status: { type: 'string' },
+            duration: { type: 'number' }
+          }
+        }
+      }
+    }
+  },
+  apis: ['./src/**/*.js'],
+});
+
+// Swagger UI endpoint
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Middleware
 app.use(cors());
@@ -22,11 +63,68 @@ const dbService = new DatabaseService();
 dbService.connect().catch(console.error);
 
 // Health check endpoint
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check
+ *     responses:
+ *       200:
+ *         description: API is running
+ */
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Training Sessions API is running' });
 });
 
+
 // Login endpoint
+/**
+ * @openapi
+ * /api/login:
+ *   post:
+ *     summary: Login with username and password
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     username:
+ *                       type: string
+ *       400:
+ *         description: Missing username or password
+ *       401:
+ *         description: Invalid credentials
+ */
 app.post('/api/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -71,7 +169,45 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
 // Forgot password endpoint
+/**
+ * @openapi
+ * /api/forgot-password:
+ *   post:
+ *     summary: Reset password for a user
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *             properties:
+ *               username:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 newPassword:
+ *                   type: string
+ *       400:
+ *         description: Username missing
+ *       404:
+ *         description: User not found
+ */
 app.post('/api/forgot-password', async (req, res) => {
   try {
     const { username } = req.body;
@@ -121,6 +257,33 @@ app.post('/api/forgot-password', async (req, res) => {
 });
 
 // Create account endpoint
+/**
+ * @openapi
+ * /api/create-account:
+ *   post:
+ *     summary: Create a new user account
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Account created
+ *       400:
+ *         description: Missing fields
+ */
 app.post('/api/create-account', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -265,6 +428,20 @@ app.get('/', async (req, res) => {
 });
 
 // GitHub SSO endpoints
+/**
+ * @openapi
+ * /auth/github:
+ *   get:
+ *     summary: Start GitHub OAuth login flow
+ *     description: Redirects the user to GitHub's OAuth authorization page.
+ *     tags:
+ *       - Auth
+ *     responses:
+ *       302:
+ *         description: Redirect to GitHub OAuth login page
+ *       500:
+ *         description: GitHub OAuth is not configured
+ */
 app.get('/auth/github', (req, res) => {
   console.log('GitHub SSO request received');
   console.log('GITHUB_CLIENT_ID:', process.env.GITHUB_CLIENT_ID ? 'Set' : 'Not set');
@@ -285,6 +462,44 @@ app.get('/auth/github', (req, res) => {
 });
 
 // GitHub OAuth callback
+/**
+ * @openapi
+ * /auth/github/callback:
+ *   get:
+ *     summary: GitHub OAuth callback handler
+ *     description: |
+ *       Handles the OAuth callback from GitHub.  
+ *       Exchanges the authorization code for an access token, fetches the GitHub user profile,  
+ *       creates or updates the user in the database, generates a JWT token,  
+ *       and redirects the user back to the frontend with login status.
+ *     tags:
+ *       - Auth
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authorization code returned by GitHub OAuth
+ *       - in: query
+ *         name: state
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Optional state parameter for CSRF protection
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with login result
+ *         headers:
+ *           Location:
+ *             description: Redirect URL containing login status, token, and user info
+ *             schema:
+ *               type: string
+ *       400:
+ *         description: Missing authorization code
+ *       500:
+ *         description: Internal server error during OAuth flow
+ */
 app.get('/auth/github/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
@@ -397,6 +612,37 @@ app.get('/auth/github/callback', async (req, res) => {
 });
 
 // Get all training sessions
+/**
+ * @openapi
+ * /api/sessions:
+ *   get:
+ *     summary: Get all sessions
+ *     tags:
+ *       - Sessions
+ *     responses:
+ *       200:
+ *         description: List of sessions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Session'
+ *
+ *   post:
+ *     summary: Create a new session
+ *     tags:
+ *       - Sessions
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SessionInput'
+ *     responses:
+ *       201:
+ *         description: Session created
+ */
 app.get('/api/sessions', async (req, res) => {
   try {
     const sessions = await dbService.getAllSessions();
@@ -408,6 +654,61 @@ app.get('/api/sessions', async (req, res) => {
 });
 
 // Get training session by ID
+/**
+ * @openapi
+ * /api/sessions/{id}:
+ *   get:
+ *     summary: Get a session by ID
+ *     tags:
+ *       - Sessions
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Session found
+ *       404:
+ *         description: Session not found
+ *
+ *   put:
+ *     summary: Update a session
+ *     tags:
+ *       - Sessions
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SessionInput'
+ *     responses:
+ *       200:
+ *         description: Session updated
+ *
+ *   delete:
+ *     summary: Delete a session
+ *     tags:
+ *       - Sessions
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Session deleted
+ *       404:
+ *         description: Session not found
+ */
 app.get('/api/sessions/:id', async (req, res) => {
   try {
     const { id } = req.params;
