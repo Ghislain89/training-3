@@ -1,7 +1,9 @@
-import { expect } from '@playwright/test';
-import { test } from '../../fixtures/api-fixture';
+import { test as base, expect } from '@playwright/test';
+import { apiFixture } from '../../fixtures/api-fixture';
 import { randomUser, createUser } from '../utils/testData';
-import { expectOk, expectCreated, expectNotFound } from '../utils/assertions';
+//import { expectOk, expectCreated, expectNotFound } from '../utils/assertions';
+
+const test = base.extend(apiFixture);
 
 test.describe('Auth API', () => {
 

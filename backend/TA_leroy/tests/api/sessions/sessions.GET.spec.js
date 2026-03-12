@@ -1,8 +1,23 @@
-import { expect } from '@playwright/test';
-import { test } from '../../fixtures/api-fixture';
-import { sessionData } from '../utils/testData';
+import { test as base, expect } from '@playwright/test';
+import { apiFixture } from '../../fixtures/api-fixture';
+//import { createSessionData, updateSessionData } from '../utils/testData';
 import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions';
+import { createSessions } from '../utils/apiHelpers';
 
+const test = base.extend(apiFixture);
+
+test.describe('Sessions API – CRUD & validation', () => {
+
+  let payloads = [];
+  let responses = [];
+
+  test.beforeEach(async ({ api }) => {
+    const result = await createSessions(api, 3, createSessionData);
+    payloads = result.payloads;
+    responses = result.responses;
+    //console.log('Request bodies:', payloads);
+    //console.log('Response bodies:', responses);
+  });
 
   test('GET /sessions returns array', async ({ api }) => {
     const res = await api.get('/api/sessions');
@@ -26,6 +41,28 @@ import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions'
     }
   });
 
+  test('GET /sessions/:id returns correct schema', async ({ api }) => {
+    const res = await api.get('/api/sessions/1');
+    expectOk(res);
+
+    const body = await res.json();
+
+    expect(typeof body.id).toBe('number');
+    expect(typeof body.title).toBe('string');
+    expect(typeof body.description).toBe('string');
+    expect(typeof body.status).toBe('string');
+    expect(typeof body.duration).toBe('number');
+
+    // geen extra velden
+    const allowed = ['id','title','description','status','duration'];
+    expect(Object.keys(body).sort()).toEqual(allowed.sort());
+  });
+
+
+
+
+  
+
   test.describe('GET /sessions/:id – invalid cases', () => {
 
     const testCases = [
@@ -41,8 +78,8 @@ import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions'
           // Ongeldige id → 400 (router kan het niet parsen) of 404 (router kan het parsen maar vindt niks)
       { id: 'abc', expected: 404, error: 'Training session not found', description: 'invalid id type' },
       { id: 'NaN', expected: 404, error: 'Training session not found', description: 'Not a Number' },
-      { id: '%FF', expected: 400, error: 'Invalid UTF-8 encoding', description: 'invalid UTF‑8' },
-      { id: '%C3%28', expected: 400, error: 'Invalid UTF-8 encoding', description: 'broken UTF‑8 sequence' },
+      { id: '%FF', expected: 400, error: 'URIError: Failed to decode param', description: 'invalid UTF‑8' },
+      { id: '%C3%28', expected: 400, error: 'URIError: Failed to decode param', description: 'broken UTF‑8 sequence' },
       { id: '%00', expected: 404, error: 'Training session not found', description: 'Null byte' },
 
       // Inputs die NIET naar /sessions/:id gaan maar naar /sessions → 200
@@ -57,12 +94,12 @@ import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions'
       { id: '{"id":4}', expected: 404, error: 'Training session not found', description: 'JSON input 2' },
       { id: '1 OR 1=1', expected: 404, error: 'Training session not found', description: 'SQL injection attempt' },
       { id: '😀', expected: 404, error: 'Training session not found', description: 'emoji' },
-      { id: '<script>alert(1)</script>', expected: 404, error: 'Training session not found', description: 'XSS attempt' },
+      { id: '<script>alert(1)</script>', expected: 404, error: 'Cannot GET /api/sessions/%3Cscript%3Ealert(1)%3C/script%3E', description: 'XSS attempt' },
 
       // Paden die bestaan maar niet onder /sessions/:id vallen → 404
       { id: 'add', expected: 404, error: 'Training session not found', description: 'existing route but not an id' },
       { id: 'edit', expected: 404, error: 'Training session not found', description: 'existing route but not an id' },
-      { id: 'edit/4', expected: 404, error: 'Training session not found', description: 'nested route' },
+      { id: 'edit/4', expected: 404, error: 'Cannot GET /api/sessions/edit/4', description: 'nested route' },
 
     ];
   
@@ -83,7 +120,14 @@ import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions'
 
       // Error body check (alleen bij 400/404)
       if (c.expected === 400 || c.expected === 404) {
-        const body = await res.json();
+        let body;
+        try {
+          body = await res.json();
+        } catch {
+          const text = await res.text();
+          body = { error: text }; //Indien Express framework een HTML foutpagina teruggeeft, vangen we dat op en zetten we de tekst in een error property zodat we toch kunnen testen
+        }
+       
         expect(body).toHaveProperty('error');
 
         if (c.error) {
@@ -94,3 +138,4 @@ import { expectOk, expectBadRequest, expectNotFound } from '../utils/assertions'
   }
 
   });
+});

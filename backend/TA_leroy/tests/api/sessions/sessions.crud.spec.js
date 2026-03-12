@@ -1,30 +1,42 @@
-import { expect } from '@playwright/test';
-import { test } from '../../fixtures/api-fixture';
-import { sessionData } from '../utils/testData';
+import { test as base, expect } from '@playwright/test';
+import { apiFixture } from '../../fixtures/api-fixture';
+
+import { createSessionData } from '../utils/testData';
 import { expectOk, expectCreated, expectNotFound } from '../utils/assertions';
+import { createSession, getSession, updateSession, deleteSession } from '../utils/apiHelpers';
+
+const test = base.extend(apiFixture);
 
 test.describe('Sessions API – CRUD & validation', () => {
+
   test('full CRUD flow', async ({ api }) => {
 
     // list
     const listRes = await api.get('/api/sessions');
     expectOk(listRes);
     const initial = await listRes.json();
-    expect(Array.isArray(initial)).toBe(true); //api geeft een lijst terug
+    expect(Array.isArray(initial)).toBe(true);
 
     // create
-    const createRes = await api.post('/api/sessions', sessionData.valid);
-    console.log('Created session:', createRes);
-    const created = await createRes.json();
-    const id = created.id;
-    expectCreated(createRes);
+    const payload = createSessionData();
+    console.log('Request body:', payload);
+
+    const res = await api.post('/api/sessions', payload);
+    expectCreated(res);
+
+    const body = await res.json();
+    console.log('Response body:', body);
+
+    const id = body.id;
 
     // get
     const getRes = await api.get(`/api/sessions/${id}`);
     expectOk(getRes);
 
     // update
-    const updateRes = await api.put(`/api/sessions/${id}`, sessionData.updated);
+    const updateRes = await updateSession(api, id, {
+      title: "updated-title"
+    });
     expectOk(updateRes);
 
     // delete
@@ -35,8 +47,6 @@ test.describe('Sessions API – CRUD & validation', () => {
     const get404 = await api.get(`/api/sessions/${id}`);
     expectNotFound(get404);
   });
-
-
 
   // ---------------------------------------------------------
   // GET /sessions/:id
@@ -51,7 +61,4 @@ test.describe('Sessions API – CRUD & validation', () => {
     const res = await api.get('/api/sessions/abc');
     expectNotFound(res);
   });
-
-
-
 });

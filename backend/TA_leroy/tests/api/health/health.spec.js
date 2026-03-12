@@ -1,4 +1,7 @@
-import { test, expect } from '../../fixtures/api-fixture';
+import { test as base, expect } from '@playwright/test';
+import { apiFixture } from '../../fixtures/api-fixture';
+
+const test = base.extend(apiFixture);
 
 test.describe('Health API', () => {
   
