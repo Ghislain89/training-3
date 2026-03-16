@@ -22,10 +22,10 @@ export class ShadowDomPage {
     await this.page.goto("/shadow-dom");
   }
 
-  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Page objects should only contain locators and actions.
-  // All assert methods below (assertClickStatusTextVisible, assertSubmitTextToBeEmpty, assertClickCountText, etc.)
-  // should live in the spec files. Expose the locators and let the tests decide what to assert.
-  // FIX: The locators are already public (this.txtStatusClickCount, etc.) — use them directly in specs with expect().
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions (expect) belong in spec files, not page objects.
+  // 8 of 12 methods here are assertion wrappers. The locators are already public (txtStatusClickCount, txtResultSubmitted)
+  // — those ARE the abstraction. Compound actions like clickClickMeButton and enterTextAndSubmit are great page object methods.
+  // FIX: Use public locators in specs: `await expect(shadowDomPage.txtStatusClickCount).toHaveText('Clicked 5 times')`
   async assertClickStatusTextVisible() {
     await expect(this.txtStatusClickCount).toBeVisible();
   }

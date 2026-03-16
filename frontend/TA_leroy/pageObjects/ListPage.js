@@ -65,10 +65,11 @@ export class ListPage {
       .first();
   }
 
-  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Page objects should only contain locators and actions.
-  // Methods like assertSessionData, expectSessionNotPresent, expectFilterSummaryVisibleAndContainsText, and
-  // expectAllVisibleSessionsMatchFilters mix "what to verify" into "how to interact" — move these to specs.
-  // FIX: Keep getters (e.g. getAllVisibleSessions, getSessionItemByTitle) here, move all expect() calls to spec files.
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions (expect) belong in spec files, not page objects.
+  // Public locators are fine — they ARE the abstraction (specs reference `listPage.txtTitle`, not raw selectors).
+  // Compound actions and parameterized locators (getSessionItemByTitle, getAllVisibleSessions) are great here — keep those.
+  // But assertSessionData, expectSessionNotPresent, expectFilterSummaryVisibleAndContainsText are assertion wrappers that
+  // add indirection without value. Move the expect() calls to specs and use the public locators directly.
   async assertSessionData(data) {
     //Get the right block based on title
     const item = this.getSessionItemByTitle(data.title);
