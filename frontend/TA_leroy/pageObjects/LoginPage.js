@@ -27,6 +27,8 @@ export class LoginPage {
         await this.btnSignIn.click();
     }
 
+    // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions belong in spec files, not page objects.
+    // FIX: Use `loginPage.errorAlertInvalidLogin` directly in the spec: await expect(loginPage.errorAlertInvalidLogin).toHaveText(...)
     async assertErrorTextInvalidLogin(errorText){
         await expect(this.errorAlertInvalidLogin).toHaveText(errorText);
     }

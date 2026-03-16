@@ -55,6 +55,10 @@ export class HealthPage {
     });
   }
 
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Page objects should only contain locators and actions.
+  // All assert/expect methods below (assertStatus, assertBackendOfflineErrorTextVisible, assertHealthErrorText, etc.)
+  // should live in the spec files. Page objects answer "how do I interact with this page?", specs answer "what do I expect?".
+  // FIX: Expose locators or getter methods (e.g. `getStatusText()`) and move assertions to specs.
   async assertStatus(state) {
     const expectedTextMap = {
       online: "Backend is Online",

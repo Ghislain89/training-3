@@ -22,6 +22,8 @@ export class EditPage {
 
     //Actions
 
+    // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions belong in spec files, not page objects.
+    // FIX: Expose locators (already done), move assertSessionData and assertUpdateFailedMessage to specs.
     async assertSessionData(data) {
         await expect(this.fieldSessionTitle).toHaveValue(data.title);
         await expect(this.fieldDescription).toHaveValue(data.description);
