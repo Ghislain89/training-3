@@ -22,6 +22,10 @@ export class ShadowDomPage {
     await this.page.goto("/shadow-dom");
   }
 
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions (expect) belong in spec files, not page objects.
+  // 8 of 12 methods here are assertion wrappers. The locators are already public (txtStatusClickCount, txtResultSubmitted)
+  // — those ARE the abstraction. Compound actions like clickClickMeButton and enterTextAndSubmit are great page object methods.
+  // FIX: Use public locators in specs: `await expect(shadowDomPage.txtStatusClickCount).toHaveText('Clicked 5 times')`
   async assertClickStatusTextVisible() {
     await expect(this.txtStatusClickCount).toBeVisible();
   }

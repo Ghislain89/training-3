@@ -1,5 +1,8 @@
 import { test as base, expect, type Page } from '@playwright/test';
 
+// REVIEW 🟢 LOW (TypeScript): This .ts file imports from .js page objects without type definitions.
+// TypeScript will infer `any` for all class members, defeating type safety.
+// FIX: Convert page objects to .ts, or add `allowJs: true` + `checkJs: true` in tsconfig.json, or create .d.ts files.
 import { AddPage } from '../pageObjects/AddPage';
 import { EditPage } from '../pageObjects/EditPage';
 import { LoginPage } from '../pageObjects/LoginPage';

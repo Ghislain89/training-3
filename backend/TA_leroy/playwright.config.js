@@ -12,6 +12,8 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
+  // REVIEW 🟢 LOW (Playwright): Browser projects are unnecessary for pure API tests. Every test runs 3x (once per browser) with zero benefit.
+  // FIX: projects: [{ name: 'api-tests' }],
   projects: [
     {
       name: 'chromium',

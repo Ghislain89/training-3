@@ -1,3 +1,5 @@
+// REVIEW 🟢 LOW (TypeScript): Inconsistent import extension — this file omits `.js` but other test files include it.
+// FIX: Use consistent import paths across all test files (e.g., '../fixtures/pages.js' everywhere).
 import { test, expect } from '../fixtures/pages';
 import { ERROR_MESSAGES } from '../constants/errorMessages.js';
 

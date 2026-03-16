@@ -65,6 +65,11 @@ export class ListPage {
       .first();
   }
 
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions (expect) belong in spec files, not page objects.
+  // Public locators are fine — they ARE the abstraction (specs reference `listPage.txtTitle`, not raw selectors).
+  // Compound actions and parameterized locators (getSessionItemByTitle, getAllVisibleSessions) are great here — keep those.
+  // But assertSessionData, expectSessionNotPresent, expectFilterSummaryVisibleAndContainsText are assertion wrappers that
+  // add indirection without value. Move the expect() calls to specs and use the public locators directly.
   async assertSessionData(data) {
     //Get the right block based on title
     const item = this.getSessionItemByTitle(data.title);
@@ -75,6 +80,9 @@ export class ListPage {
       }),
     ).toBeVisible();
 
+    // REVIEW 🔴 HIGH (Playwright): `.locator()` expects a string selector, but `this.txtTitle` etc. are Locator objects.
+    // This won't scope correctly inside `item`. Use the helper methods already defined above:
+    // FIX: await expect(this.sessionTitleIn(item)).toHaveText(data.title);  (etc.)
     await expect(item.locator(this.txtTitle)).toHaveText(data.title);
     await expect(item.locator(this.txtDescription)).toHaveText(data.description);
     await expect(item.locator(this.txtStatus)).toHaveText(data.status);
@@ -136,6 +144,8 @@ export class ListPage {
 }
 
 
+// REVIEW 🟡 MEDIUM (Playwright): This method is not `async` but is called with `await` in tests (sessions.spec.js line 168).
+// FIX: Add `async` keyword: `async expectAllVisibleSessionsMatchFilters(sessions, filters) {`
 expectAllVisibleSessionsMatchFilters(sessions, filters) {
   const matchers = {
     [FILTER_TYPE.TITLE]: (s, value) => s.title?.trim().toLowerCase().includes(value.trim().toLowerCase()),

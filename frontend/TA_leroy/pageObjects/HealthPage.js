@@ -1,5 +1,7 @@
 import { expect } from "@playwright/test";
 
+// REVIEW 🟢 LOW (Playwright): Hardcoded backend URL will break if the port changes (e.g. in CI).
+// FIX: const HEALTH_URL = `${process.env.BACKEND_URL || 'http://localhost:3001'}/health`;
 const HEALTH_URL = "http://localhost:3001/health";
 
 
@@ -12,7 +14,7 @@ export class HealthPage {
     this.page = page;
 
     //Elements
-    this.statusText = page.getByTestId("status-text");
+    this.statusText = page.getByTestId("status-text"); //GG Ik  hou niet van data-test-ids (meer :D)
     this.healthError = page.getByTestId("health-error");
     this.healthErrorText = page.locator('[data-testid="health-error"] .error-text');
     this.lastChecked = page.getByTestId("last-checked");
@@ -53,6 +55,11 @@ export class HealthPage {
     });
   }
 
+  // REVIEW 🟡 MEDIUM (Playwright — Architecture): Assertions (expect) belong in spec files, not page objects.
+  // Public locators are fine — in Playwright they ARE the abstraction layer (no raw selectors leak to specs).
+  // Compound actions (e.g. mockBackendOnline, goToHealthPage) are great page object methods — keep those.
+  // But assertion wrappers like assertStatus, assertHealthErrorText etc. just add indirection.
+  // FIX: Use existing public locators in specs: `await expect(healthPage.statusText).toHaveText('Backend is Online')`
   async assertStatus(state) {
     const expectedTextMap = {
       online: "Backend is Online",
@@ -63,6 +70,8 @@ export class HealthPage {
     await expect(this.statusText).toHaveText(expectedTextMap[state]);
   }
 
+
+  //GG: Ik zou deze assertions verplaatsen naar naar de specs.
   async assertBackendOfflineErrorTextVisible() {
     await expect(this.healthError).toBeVisible();
   }

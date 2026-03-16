@@ -1,8 +1,12 @@
 import { test as base, expect } from '@playwright/test';
 import { apiFixture } from '../../fixtures/api-fixture';
 
+// REVIEW 🔴 HIGH: `createSessionData` does not exist in testData.js — only `randomSession` is exported. This will crash at runtime.
+// FIX: import { randomSession } from '../utils/testData';
 import { createSessionData } from '../utils/testData';
 import { expectOk, expectCreated, expectNotFound } from '../utils/assertions';
+// REVIEW 🔴 HIGH: `createSession` and `getSession` are not exported from apiHelpers.js (they're commented out). This will crash at runtime.
+// FIX: import { updateSession, deleteSession } from '../utils/apiHelpers';
 import { createSession, getSession, updateSession, deleteSession } from '../utils/apiHelpers';
 
 const test = base.extend(apiFixture);

@@ -41,6 +41,8 @@ import { test } from '../fixtures/pages.js';
     await healthPage.assertStatus("online");
     await healthPage.assertLastCheckedVisible();
     await healthPage.assertLastCheckedFormat();
+    // REVIEW 🟢 LOW (Playwright): Magic number timeout. If the refresh interval changes, this test silently breaks.
+    // FIX: Define a constant: const REFRESH_INTERVAL_MS = 5000; then use REFRESH_INTERVAL_MS + 2000
     await healthPage.assertLastCheckedUpdates(7000); // 7 seconden om zeker te zijn dat de update heeft plaatsgevonden
   });
 

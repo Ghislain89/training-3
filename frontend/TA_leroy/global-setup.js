@@ -18,7 +18,7 @@ export default async function globalSetup() {
       shell: true 
     });
     console.log('✅ Database reset completed successfully');
-  } catch (error) {
+  } catch (error) { // REVIEW 🟢 LOW (TypeScript): `error` has implicit `any` type. Add JSDoc: /** @type {Error} */
     console.error('❌ Database reset failed:', error.message);
     // Don't fail the tests if reset fails, just warn
     console.warn('⚠️  Continuing with tests despite database reset failure');

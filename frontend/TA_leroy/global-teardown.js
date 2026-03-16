@@ -21,7 +21,7 @@ export default async function globalTeardown() {
         fs.unlinkSync(pidFile);
       }
     }
-  } catch (e) {
+  } catch (e) { // REVIEW 🟢 LOW (TypeScript): `e` has implicit `any` type. Add JSDoc: /** @type {Error} */
     console.warn('⚠️  Global teardown warning:', e.message);
   }
 }
