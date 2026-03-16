@@ -75,6 +75,9 @@ export class ListPage {
       }),
     ).toBeVisible();
 
+    // REVIEW 🔴 HIGH (Playwright): `.locator()` expects a string selector, but `this.txtTitle` etc. are Locator objects.
+    // This won't scope correctly inside `item`. Use the helper methods already defined above:
+    // FIX: await expect(this.sessionTitleIn(item)).toHaveText(data.title);  (etc.)
     await expect(item.locator(this.txtTitle)).toHaveText(data.title);
     await expect(item.locator(this.txtDescription)).toHaveText(data.description);
     await expect(item.locator(this.txtStatus)).toHaveText(data.status);
@@ -136,6 +139,8 @@ export class ListPage {
 }
 
 
+// REVIEW 🟡 MEDIUM (Playwright): This method is not `async` but is called with `await` in tests (sessions.spec.js line 168).
+// FIX: Add `async` keyword: `async expectAllVisibleSessionsMatchFilters(sessions, filters) {`
 expectAllVisibleSessionsMatchFilters(sessions, filters) {
   const matchers = {
     [FILTER_TYPE.TITLE]: (s, value) => s.title?.trim().toLowerCase().includes(value.trim().toLowerCase()),

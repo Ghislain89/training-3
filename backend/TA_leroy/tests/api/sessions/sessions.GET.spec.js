@@ -8,10 +8,14 @@ const test = base.extend(apiFixture);
 
 test.describe('Sessions API – CRUD & validation', () => {
 
+  // REVIEW 🟡 MEDIUM: `payloads` and `responses` are populated in beforeEach but never used in any test.
+  // Tests use hardcoded IDs (1, 999999) instead. Either remove the beforeEach or use these variables in your tests.
   let payloads = [];
   let responses = [];
 
   test.beforeEach(async ({ api }) => {
+    // REVIEW 🟡 MEDIUM: `createSessionData` is not imported/defined — it's `undefined` here.
+    // Also, `createSessions()` never uses this parameter internally anyway. Remove it: createSessions(api, 3)
     const result = await createSessions(api, 3, createSessionData);
     payloads = result.payloads;
     responses = result.responses;

@@ -1,3 +1,4 @@
+// REVIEW 🟢 LOW: Unused import — `log` is never used in this file. Remove it.
 import { log } from 'node:console';
 import { test, expect } from '../fixtures/pages.js';
 

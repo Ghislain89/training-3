@@ -13,6 +13,8 @@
 
 //Random session en createSessionData goed zetten
 
+// REVIEW 🟡 MEDIUM: The `createSessionData` parameter is accepted but never used — the function always calls `randomSession()` on line 23.
+// FIX: Either remove the param: `async (api, count) =>` or use it: `const payload = createSessionData ? createSessionData() : randomSession();`
 export const createSessions = async (api, count, createSessionData) => {
 
   const payloads = [];

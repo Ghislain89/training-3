@@ -1,5 +1,7 @@
 import { expect } from "@playwright/test";
 
+// REVIEW 🟢 LOW (Playwright): Hardcoded backend URL will break if the port changes (e.g. in CI).
+// FIX: const HEALTH_URL = `${process.env.BACKEND_URL || 'http://localhost:3001'}/health`;
 const HEALTH_URL = "http://localhost:3001/health";
 
 
@@ -12,7 +14,7 @@ export class HealthPage {
     this.page = page;
 
     //Elements
-    this.statusText = page.getByTestId("status-text");
+    this.statusText = page.getByTestId("status-text"); //GG Ik  hou niet van data-test-ids (meer :D)
     this.healthError = page.getByTestId("health-error");
     this.healthErrorText = page.locator('[data-testid="health-error"] .error-text');
     this.lastChecked = page.getByTestId("last-checked");
@@ -63,6 +65,8 @@ export class HealthPage {
     await expect(this.statusText).toHaveText(expectedTextMap[state]);
   }
 
+
+  //GG: Ik zou deze assertions verplaatsen naar naar de specs.
   async assertBackendOfflineErrorTextVisible() {
     await expect(this.healthError).toBeVisible();
   }
